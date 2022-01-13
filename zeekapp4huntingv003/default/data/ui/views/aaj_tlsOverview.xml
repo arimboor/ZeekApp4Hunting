@@ -1,5 +1,5 @@
 <form theme="dark">
-  <label>SSL /TLS Traffic</label>
+  <label>SSL /TLS Traffic Overview</label>
   <description>version 1.2</description>
   <fieldset submitButton="true" autoRun="true">
     <input type="time" token="time1">

@@ -12,7 +12,7 @@
   </fieldset>
   <row>
     <panel>
-      <title>Domain Registration ( D- 7 days)</title>
+      <title>DNS Tunneling</title>
       <table>
         <search>
           <query>index=zeek sourcetype="bro:dhcp:json" mac=$macToken$ 
@@ -33,7 +33,7 @@
       </table>
     </panel>
     <panel>
-      <title>Domain Registration ( D- 30 days)</title>
+      <title>subdomain</title>
       <table>
         <search>
           <query>index=zeek sourcetype="bro:dhcp:json" mac=$macToken$ 
@@ -54,7 +54,7 @@
       </table>
     </panel>
     <panel>
-      <title>Domain Registration ( D- 90 days)</title>
+      <title>txt field</title>
       <table>
         <search>
           <query>index=zeek sourcetype="bro:dhcp:json" mac=$macToken$ 

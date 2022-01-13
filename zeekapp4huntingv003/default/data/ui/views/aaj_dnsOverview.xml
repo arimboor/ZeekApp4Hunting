@@ -1,5 +1,5 @@
 <form theme="dark">
-  <label>DNS Traffic Flow</label>
+  <label>DNS Traffic Overview</label>
   <description>last updated on 3rd Jan 2021 by Jinto Antony</description>
   <fieldset submitButton="true" autoRun="true">
     <input type="time" token="time1">

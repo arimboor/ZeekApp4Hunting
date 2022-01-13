@@ -1,5 +1,5 @@
 <form theme="dark">
-  <label>IP Address Based</label>
+  <label>IP Address Based - Temp</label>
   <description>version 1.2</description>
   <fieldset submitButton="true" autoRun="true">
     <input type="time" token="time1">

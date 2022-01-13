@@ -25,12 +25,11 @@
 | eval mac_code = upper(substr(replace(mac, ":",""),1,6)) 
 | eval mac_code1 = upper(substr(replace(mac, ":",""),1,6)) 
 | eval host_name = lower(host_name) 
-| lookup MacToUser.csv mac OUTPUT emp 
 | lookup ouiv2.csv code as mac_code OUTPUT companyName 
 | fillnull value=unknown 
 | search client_addr=10.0.0.0/8 NOT companyName=vmware* NOT mac_code1=080027 
 | dedup mac 
-| table mac mac_code1 companyName host_name emp
+| table mac mac_code1 companyName host_name 
 | fields - mac_code1</query>
           <earliest>$time1.earliest$</earliest>
           <latest>$time1.latest$</latest>
@@ -52,12 +51,9 @@
           <query>eventtype=zeek_idx_sourcetype 
 | dedup mac 
 | eval mac_code = upper(substr(replace(mac, ":",""),1,6)) 
-| lookup MacToUser.csv mac OUTPUT emp 
 | lookup ouiv2.csv code as mac_code OUTPUT companyName 
 | fillnull value=unknown 
-| stats count by companyName
-          
-        </query>
+| stats count by companyName</query>
           <earliest>$time1.earliest$</earliest>
           <latest>$time1.latest$</latest>
           <sampleRatio>1</sampleRatio>
@@ -88,9 +84,8 @@
         <search>
           <query>eventtype=zeek_idx_sourcetype sourcetype="bro:dhcp:json" 
 | dedup mac 
-| lookup MacToUser.csv mac OUTPUT emp 
 | fillnull value=unknown 
-| search emp= unknown client_addr=10.0.0.0/8 NOT companyName=vmware*
+| search client_addr=10.0.0.0/8 NOT companyName=vmware* 
 | stats count</query>
           <earliest>$time1.earliest$</earliest>
           <latest>$time1.latest$</latest>
@@ -111,9 +106,7 @@
         <search>
           <query>eventtype=zeek_idx_sourcetype sourcetype="bro:dhcp:json" 
 | dedup mac 
-| lookup MacToUser.csv mac OUTPUT emp 
 | fillnull value=unknown 
-| search NOT emp=unknown 
 | stats count</query>
           <earliest>$time1.earliest$</earliest>
           <latest>$time1.latest$</latest>

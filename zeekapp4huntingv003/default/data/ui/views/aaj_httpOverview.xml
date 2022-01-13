@@ -1,5 +1,5 @@
 <form theme="dark">
-  <label>HTTP Traffic [Non-Encrypted]</label>
+  <label>HTTP Traffic Overview</label>
   <fieldset submitButton="true" autoRun="true">
     <input type="time" token="time1">
       <label>Time Range</label>
