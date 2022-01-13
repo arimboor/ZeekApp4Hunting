@@ -1,0 +1,78 @@
+<form theme="dark">
+  <label>Fast Flux Pattern</label>
+  <description>version 1.2</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label>Timeline</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Domain Registration ( D- 7 days)</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype="bro:dhcp:json" mac=$macToken$ 
+| stats first(_time) as first_seen by client_addr mac  host_name
+| convert ctime(first_seen) 
+| sort - first_seen</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Domain Registration ( D- 30 days)</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype="bro:dhcp:json" mac=$macToken$ 
+| stats first(_time) as first_seen by client_addr mac  host_name
+| convert ctime(first_seen) 
+| sort - first_seen</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Domain Registration ( D- 90 days)</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype="bro:dhcp:json" mac=$macToken$ 
+| stats first(_time) as first_seen by client_addr mac  host_name
+| convert ctime(first_seen) 
+| sort - first_seen</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

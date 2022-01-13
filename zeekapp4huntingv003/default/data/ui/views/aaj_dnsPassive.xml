@@ -1,0 +1,45 @@
+<form theme="dark">
+  <label>Passive DNS</label>
+  <description>version 1.2</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="text" token="tokenPassiveDNS">
+      <label>Domain Name</label>
+      <default>*</default>
+    </input>
+    <input type="dropdown" token="tokenPassiveType">
+      <label>Type</label>
+      <fieldForLabel>qtype</fieldForLabel>
+      <fieldForValue>query_type</fieldForValue>
+      <search>
+        <query>eventtype=zeek_idx_sourcetype sourcetype="bro:dns:json" NOT query IN (ISATAP,WORKGROUP) query_type IN (PTR,A,SOA,NB,AAAA,SRV,TXT) query=$tokenPassiveDNS$
+| dedup query_type 
+| table query_type</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Machine inventory</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:dns:json" NOT query IN (ISATAP,WORKGROUP) query=$tokenPassiveDNS$ NOT rcode_name IN (NXDOMAIN) 
+| bin span=1d _time 
+| dedup  query  answer answers   
+| table _time query query_type answer answers TTLs* rcode_name</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

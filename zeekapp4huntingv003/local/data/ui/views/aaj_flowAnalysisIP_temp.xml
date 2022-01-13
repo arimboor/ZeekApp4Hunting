@@ -1,0 +1,169 @@
+<form theme="dark">
+  <label>IP Address Based - Temp</label>
+  <description>version 1.2</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label>Timeline</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="ipToken">
+      <label>Source IP Address</label>
+      <fieldForLabel>src_ip</fieldForLabel>
+      <fieldForValue>id.orig_h</fieldForValue>
+      <search>
+        <query>index=zeek sourcetype="bro:conn:json" id.orig_h =10.0.0.0/8 
+| dedup id.orig_h 
+| table id.orig_h 
+| sort - id.orig_h</query>
+        <earliest>-30d@d</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+    <input type="dropdown" token="tokenDestIP">
+      <label>Dest IP Address</label>
+    </input>
+    <input type="dropdown" token="tokenDPort">
+      <label>Dest Port</label>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>IP Address Allocation</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype="bro:dhcp:json"  client_addr=$ipToken$
+| dedup client_addr mac 
+| table _time client_addr mac client_fqdn host_name</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Bandwidth Usage [External IP]</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:conn:json" id.orig_h=$ipToken$ NOT id.resp_p IN (0) NOT id.resp_h IN (10.0.0.0/8) 
+| table id.orig_h id.orig_p id.resp_h id.resp_p orig_bytes resp_bytes 
+| eval tot = orig_bytes + resp_bytes 
+| stats sum(tot) as total_MB by id.resp_p 
+| where total_MB&gt; 0 
+| eval total_MB=round(((total_MB/1024)/1024),5) 
+| sort - total_MB</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Bandwidth Usage [External IP]</title>
+      <viz type="Splunk_TA_Common-VIZ.semicircle_donut">
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:conn:json" id.orig_h=$ipToken$ NOT id.resp_p IN (0) NOT id.resp_h IN (10.0.0.0/8) 
+| table id.orig_h id.orig_p id.resp_h id.resp_p orig_bytes resp_bytes 
+| eval tot = orig_bytes + resp_bytes 
+| stats sum(tot) as total_MB by id.resp_p 
+| where total_MB&gt; 0 
+| eval total_MB=round(((total_MB/1024)/1024),5) 
+| sort - total_MB</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="Splunk_TA_Common-VIZ.semicircle_donut.cutoutPercentage">50</option>
+        <option name="Splunk_TA_Common-VIZ.semicircle_donut.legendPosition">left</option>
+        <option name="Splunk_TA_Common-VIZ.semicircle_donut.type">full</option>
+        <option name="drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>File Downloads (.exe)</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype="bro:http:json" NOT user_agent=@* resp_mime_types IN ("application/x-dosexec") id.orig_h=$ipToken$ 
+| eval a=host 
+| eval web_url=mvindex(a,-1) 
+| eval uri_filename=mvindex(split(url,"/"),-1) 
+| search uri_filename=*.* 
+| table uid user_agent uri method web_url resp_mime_types uri_filename id.orig_h 
+| stats count by uri_filename 
+| search uri_filename=*.exe | sort - count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <title>File Downloads (others)</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype="bro:http:json" NOT user_agent=@* resp_mime_types IN ("application/x-dosexec") id.orig_h=$ipToken$ 
+| eval a=host 
+| eval web_url=mvindex(a,-1) 
+| eval uri_filename=mvindex(split(url,"/"),-1) 
+| search uri_filename=*.* 
+| table uid user_agent uri method web_url resp_mime_types uri_filename id.orig_h 
+| stats count by uri_filename 
+| search NOT uri_filename=*.exe</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Software</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype=*software* 
+| eval sourceHost= mvindex(dvc,-1) 
+| search sourceHost= $ipToken$ 
+| dedup name software_type unparsed_version version.addl version.major 
+| table sourceHost name software_type unparsed_version version.addl version.major</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>User Agents</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype="bro:http:json" id.orig_h=$ipToken$ 
+| stats count by user_agent</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

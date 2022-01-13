@@ -1,0 +1,239 @@
+<form theme="dark">
+  <label>DNS Traffic Overview</label>
+  <description>last updated on 3rd Jan 2021 by Jinto Antony</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label>Search Timeline</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Upstream DNS Servers : UN-Known</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype NOT id.resp_h IN (10.0.0.0/8,f*,224.0.0.*,169.254.255.255, 172.16.0.0/12,192.168.0.0/16) dest_port IN (53)
+| lookup publicdns.csv ipaddr as id.resp_h OUTPUT provider 
+| fillnull value=unknown 
+| search provider=unknown 
+| dedup id.resp_h 
+| stats count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unitPosition">before</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>DNS Data Transfer :Outgoing</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:conn:json" service=dns 
+| stats sum(orig_bytes) as Outgoing 
+| eval Outgoing = round(Outgoing/1024/1024,2)</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[100,1024]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unit">MB</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>NXDOMAIN Response</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:dns:json NOT query IN (*.arpa,*-guest,local) query IN (*.*) NOT rcode_name = NOERROR 
+| stats count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unitPosition">before</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>DNS over TLS : DoT</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:conn:json" id.resp_p IN (853) 
+| stats count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0x006d9c"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unitPosition">before</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>DNS over HTTPS: DoH</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:conn:json" id.resp_p IN (443) id.resp_h=8.8.4.4 
+| stats count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0x006d9c"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unitPosition">before</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>DNS Traffic Patterns (Past 7 days)</title>
+      <chart>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:dns:json earliest=-14d@d latest=-0d@d 
+| timechart span=1d count 
+| timewrap 1w 
+| rename latest_week as current_week 1week_before as previous_week</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Upstream DNS Servers</title>
+      <viz type="Splunk_TA_Common-VIZ.semicircle_donut">
+        <search>
+          <query>eventtype=zeek_idx_sourcetype NOT id.resp_h IN (10.0.0.0/8,f*,224.0.0.25*,169.254.255.255, 172.16.0.0/12,192.168.0.0/16) dest_port IN (53)
+| lookup aaj_wellknownPublicDNS.csv ipaddr as id.resp_h OUTPUT provider 
+| fillnull value=unknown 
+| stats count by provider 
+| table provider count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="Splunk_TA_Common-VIZ.semicircle_donut.cutoutPercentage">50</option>
+        <option name="Splunk_TA_Common-VIZ.semicircle_donut.legendPosition">top</option>
+        <option name="Splunk_TA_Common-VIZ.semicircle_donut.type">half</option>
+        <option name="drilldown">all</option>
+        <option name="height">212</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+    <panel>
+      <title>DNS Requests (TCP/UDP)</title>
+      <chart>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:dns:json 
+| stats count by proto</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Upstream DNS Servers  [UN-Known Providers]</title>
+      <map>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype NOT id.resp_h IN (10.0.0.0/8,f*,224.0.0.25*,169.254.255.255, 172.16.0.0/12,192.168.0.0/16) dest_port=53 
+| stats count by id.resp_h 
+| iplocation id.resp_h 
+| lookup aaj_wellknownPublicDNS.csv ipaddr as id.resp_h OUTPUT provider 
+| fillnull value=NULL 
+| search provider= NULL 
+| geostats latfield=lat longfield=lon count by Country</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="mapping.type">marker</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </map>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>DNS Query Types over UDP</title>
+      <chart>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype proto=udp
+| stats count by qtype_name</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>DNS Query Types over TCP</title>
+      <chart>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype proto=tcp
+| stats count by qtype_name</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>

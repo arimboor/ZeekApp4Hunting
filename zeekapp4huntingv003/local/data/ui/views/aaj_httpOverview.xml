@@ -1,0 +1,92 @@
+<form theme="dark">
+  <label>HTTP Traffic Overview</label>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="multiselect" token="mselect1">
+      <label>Exclude Type:</label>
+      <valuePrefix>"</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> AND Country!=</delimiter>
+      <fieldForLabel>Country</fieldForLabel>
+      <fieldForValue>Country</fieldForValue>
+      <choice value="A">A</choice>
+      <choice value="NXDOMAIN">NXDOMAIN</choice>
+      <choice value="AAAA">AAAA</choice>
+      <choice value="MX">MX</choice>
+      <choice value="TXT">TXT</choice>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Mime Types [NON Encrypted]</title>
+      <table>
+        <search>
+          <query>index=zeek sourcetype="bro:http:json" NOT user_agent=@* 
+| eval a=host 
+| eval web_url=mvindex(a,-1) 
+| eval uri_filename=mvindex(split(url,"/"),-1) 
+| search uri_filename=*.* 
+| table uid user_agent uri method web_url resp_mime_types uri_filename id.orig_h 
+| stats count by resp_mime_types 
+| search NOT resp_mime_types IN (text*,image*) 
+| sort - count 
+| rename count as Count, resp_mime_types as "Mime Type" 
+| sort "Mime Type"</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <title>File Downloads [NON Encrypted]</title>
+      <table>
+        <title>NOT user_agent=@*</title>
+        <search>
+          <query>index=zeek sourcetype="bro:http:json" NOT user_agent=@* resp_mime_types IN ("application/x-dosexec") 
+| eval a=host 
+| eval web_url=mvindex(a,-1) 
+| eval uri_filename=mvindex(split(url,"/"),-1) 
+| search uri_filename=*.* 
+| table uid user_agent uri method web_url resp_mime_types uri_filename id.orig_h 
+| stats values(id.orig_h) as source by uri_filename</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>File Downloads [NON Encrypted]</title>
+      <table>
+        <title>user_agent=@*</title>
+        <search>
+          <query>index=zeek sourcetype="bro:http:json"  user_agent=@* resp_mime_types IN ("application/x-dosexec") 
+| eval a=host 
+| eval web_url=mvindex(a,-1) 
+| eval uri_filename=mvindex(split(url,"/"),-1) 
+| search uri_filename=*.* 
+| table uid user_agent uri method web_url resp_mime_types uri_filename id.orig_h 
+| stats values(id.orig_h) as source by uri_filename</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

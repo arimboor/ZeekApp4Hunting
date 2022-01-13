@@ -1,0 +1,65 @@
+<form theme="dark">
+  <label>Beaconing</label>
+  <description>last updated on 26th Dec 2021 by Jinto Antony</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label>Timeline</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="text" token="tokenTLD">
+      <label>Filter based on TLD</label>
+      <initialValue>*</initialValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>DNS Beaconing</title>
+      <chart>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:dns:json 
+| eval list="mozilla" 
+| `ut_parse_extended(query,list)` 
+| rename ut_domain AS query 
+| streamstats current=f last(_time) as last_time by query 
+| eval gap=last_time - _time 
+| stats count avg(gap) AS AverageBeaconTime var(gap) AS VarianceBeaconTime BY query 
+| eval AverageBeaconTime=round(AverageBeaconTime,3), VarianceBeaconTime=round(VarianceBeaconTime,3) 
+| sort -count 
+| where VarianceBeaconTime &lt; 60 AND count &gt; 2 AND AverageBeaconTime&gt;1.000 
+| table query VarianceBeaconTime count AverageBeaconTime 
+| search NOT query IN (*.arpa,*.local,none)</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="charting.chart">bubble</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Sub Domain : NXDOMAIN</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:dns:json NOT query IN (*.arpa,*-guest,local) query IN (*.*) NOT rcode_name = NOERROR query =$tokenTLD$ 
+| stats count by query 
+| sort -count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,282 @@
+<form theme="dark">
+  <label>SSL /TLS Traffic</label>
+  <description>version 1.2</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label></label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>CERT (Self-Signed)</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:ssl:json" validation_status="self signed certificate*" 
+| stats count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unitPosition">before</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>CERT (Expired)</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:ssl:json"  validation_status="certificate has expired" 
+| stats count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unitPosition">before</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>CERT (Newly Generated)</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:x509:json" 
+| dedup certificate.serial 
+| rex "O=(?&lt;Org&gt;[^,]+)" 
+| eval Org= mvindex(split(mvindex(split(Org,","),0),"\\"),0) 
+| rename certificate.not_valid_after as expiry certificate.not_valid_before as issue 
+| eval c_time = now() 
+| eval days = round((c_time - issue)/86400,0) 
+| search days&lt;7 
+| convert ctime(issue) 
+| table _time c_time issue expiry days certificate.serial certificate.issuer Org 
+| fields - expiry _time c_time certificate.issuer 
+| stats dc(certificate.serial)</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unitPosition">before</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>CERT (Let's Encrypt)</title>
+      <single>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:x509:json" 
+| dedup certificate.serial 
+| rex "O=(?&lt;Org&gt;[^,]+)" 
+| eval Org= mvindex(split(mvindex(split(Org,","),0),"\\"),0) 
+| rename certificate.not_valid_after as expiry certificate.not_valid_before as issue 
+| eval c_time = now() 
+| eval days = round((c_time - issue)/86400,0) 
+| search days&lt;7  Org IN ("Let's Encrypt") 
+| convert ctime(issue) 
+| table _time c_time issue expiry days certificate.serial certificate.issuer Org 
+| fields - expiry _time c_time certificate.issuer 
+| sort days | stats dc(certificate.serial)</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">all</option>
+        <option name="height">50</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="unitPosition">before</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Geo-location [ CERT : Self-signed, Expired]</title>
+      <map>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:ssl:json" validation_status IN ("self signed certificate","certificate has expired") 
+| iplocation dest_ip 
+| geostats count by Country</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="mapping.type">marker</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </map>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Outgoing TLS connection [self-signed, expired certificate]</title>
+      <table>
+        <title>done</title>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:ssl:json"validation_status IN ("self signed certificate in certificate chain","self signed certificate","certificate has expired") 
+| rex "O=(?&lt;Org&gt;[^,]+)" 
+| eval Org= mvindex(split(mvindex(split(Org,","),0),"\\"),0) 
+| fillnull value=unknown 
+| dedup server_name 
+| iplocation dest_ip 
+| search NOT server_name IN (*apple*) 
+| table server_name dest_ip validation_status issuer Country Org 
+| fields - issuer</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>TLS Certificate Key Length</title>
+      <table>
+        <title>done</title>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:x509:json" 
+| stats count by certificate.key_length certificate.key_type 
+| sort count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Newly generated TLS certificates [age &lt; 30 days]</title>
+      <table>
+        <title>done</title>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:x509:json" 
+| dedup certificate.serial 
+| rex "O=(?&lt;Org&gt;[^,]+)" 
+| eval Org= mvindex(split(mvindex(split(Org,","),0),"\\"),0) 
+| rename certificate.not_valid_after as expiry certificate.not_valid_before as issue 
+| eval c_time = now() 
+| eval days = round((c_time - issue)/86400,0) 
+| search days&lt;30 
+| convert ctime(issue) 
+| table _time c_time issue expiry days certificate.serial certificate.issuer Org 
+| fields - expiry _time c_time  certificate.issuer 
+| sort days</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>TLS Cypher Types</title>
+      <table>
+        <title>done</title>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:ssl:json" 
+| stats count by cipher server_name
+    | sort - count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>TLS certificate issuer [excluding knowns]</title>
+      <table>
+        <title>done</title>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:ssl:json" 
+| rex "O=(?&lt;Org&gt;[^,]+)" 
+| eval Org= mvindex(split(mvindex(split(Org,","),0),"\\"),0) 
+| search NOT Org IN (*microsoft*,*Amazon*,*Kaspersky*,*salesforce*,*oracle*,*apple*,*dell*,*google*,*twitter*,*cisco*,*github*,*mcafee*,*linkedin*,*intel*,*adobe*,*vmware*,*mozila*) 
+| stats count by Org 
+| sort -count</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>x509 Top Subjects</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:x509:json" 
+| top certificate.subject 
+| rename certificate.subject as "Certificate Subject"</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row id="row_x509_2">
+    <panel>
+      <title>x509 Rare Subjects</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:x509:json" 
+| rare certificate.subject 
+| rename certificate.subject as "Certificate Subject", count as Count, percent as Percent</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

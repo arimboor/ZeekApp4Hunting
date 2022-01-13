@@ -1,0 +1,75 @@
+<form theme="dark">
+  <label>File Insights</label>
+  <description>version 0.3 : last updated on 06/Dec/2021 by Jinto Antony</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="tokenFileType">
+      <label>File Type</label>
+      <fieldForLabel>File Type</fieldForLabel>
+      <fieldForValue>mime_type</fieldForValue>
+      <search>
+        <query>eventtype=zeek_idx_sourcetype sourcetype="bro:files:json" NOT mime_type IN (application/x-x509-ca-cert,application/ocsp-request,application/ocsp-response) 
+| dedup mime_type 
+| table mime_type</query>
+        <earliest>$time1.earliest$</earliest>
+        <latest>$time1.latest$</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>File Types</title>
+      <chart>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:files:json" NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250) NOT mime_type IN (*x509*,*ocsp*,*html*,*plain*,*jpeg*) 
+| stats count by mime_type</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>File Types</title>
+      <chart>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:files:json" NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250)  mime_type!=NULL 
+| lookup mimeType.csv type AS mime_type OUTPUT Suffixes 
+| fillnull value=unknown Suffixes 
+| table _time rx_hosts Suffixes mime_type conn_uids* fuid md5 sha256 sha1 
+| stats count by Suffixes</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>File Downloads</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:files:json" NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250) NOT mime_type IN (*x509*,*ocsp*,*html*,*plain*,*jpeg*) 
+| table _time rx_hosts mime_type conn_uids* fuid md5 sha256 sha1</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

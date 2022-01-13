@@ -1,0 +1,109 @@
+<form theme="dark">
+  <label>TOR Traffic</label>
+  <description>version 0.3 : last updated on 06/Dec/2021 by Jinto Antony</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>TOR Port Traffic</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:conn:json id.resp_p IN (44444,55555,5555,4444,9001) id.orig_h=10.0.0.0/8 NOT id.resp_h IN (10.0.0.0/8) 
+| iplocation id.resp_h 
+| eval MB = (resp_bytes/1024)/1024 
+| table _time id.orig_h id.resp_h Country id.resp_p proto app uid conn_state conn_state_meaning MB 
+| fields - uid conn_state conn_state_meaning 
+| sort - _time</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>TOR Port Traffic [SSL]</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:ssl:json NOT id.resp_h IN (10.0.0.0/8) NOT id.resp_p IN (53,123,5353,5355) id.resp_p=9001 
+| iplocation id.resp_h 
+| eval MB = (resp_bytes/1024)/1024 
+| table _time sourcetype id.orig_h id.resp_h id.resp_p proto app uid conn_state conn_state_meaning type server_name ja3 ja3s Country resp_bytes MB 
+| fields - proto app conn_state conn_state_meaning type MB resp_bytes uid id.orig_p ja3s sourcetype 
+| sort -_time</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>TOR  Traffic based on TI</title>
+      <table>
+        <title>From https://lists.fissionrelays.net/tor/</title>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:conn:json id.orig_h=10.0.0.0/8 NOT id.resp_h IN (10.0.0.0/8) 
+| iplocation id.resp_h 
+| lookup tor_nodes.csv IP AS id.resp_h OUTPUT Type 
+| search Type!=NULL 
+| table _time id.orig_h id.resp_h id.resp_p proto app uid conn_state conn_state_meaning Type Country 
+| fields - uid conn_state conn_state_meaning</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Onion URL requests</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:dns:json query=*onion id.orig_h=10.0.0.0/8 
+| table _time id.orig_h query</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Proxy Access</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype=bro:conn:json NOT id.resp_h IN (10.0.0.0/8) 
+| iplocation id.resp_h 
+| lookup spysoneproxy.csv IP AS id.resp_h OUTPUT Type Port 
+| dedup Type id.orig_h id.resp_h id.resp_p 
+| table Type id.orig_h id.resp_h id.resp_p Country Port</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

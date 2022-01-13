@@ -1,0 +1,173 @@
+<form theme="dark">
+  <label>Traffic Inspection - IP Flow</label>
+  <description>last updated on 03rd Jan 2022</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time1">
+      <label>Timeline</label>
+      <default>
+        <earliest>-7d@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="ipToken">
+      <label>Source IP Address</label>
+      <fieldForLabel>src_ip</fieldForLabel>
+      <fieldForValue>id.orig_h</fieldForValue>
+      <search>
+        <query>index=zeek sourcetype="bro:conn:json" id.orig_h =10.0.0.0/8 
+| dedup id.orig_h 
+| table id.orig_h 
+| sort - id.orig_h</query>
+        <earliest>-30d@d</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+    <input type="text" token="tokenUID">
+      <label>UID</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="tokenDestIP">
+      <label>Destination IP</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="tokenDPort">
+      <label>Dest Port</label>
+      <default>*</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>NXDomain</title>
+      <chart>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:dns:json" id.orig_h=$ipToken$ uid=$tokenUID$ id.resp_h=$tokenDestIP$ id.resp_p=$tokenDPort$ NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250) 
+| eval rcode_name=case(rcode_name="NOERROR","normal",rcode_name="NXDOMAIN","suspicious") 
+| stats count by rcode_name</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Connection logs</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:conn:json" id.orig_h=$ipToken$ uid=$tokenUID$ id.resp_h=$tokenDestIP$ id.resp_p=$tokenDPort$ NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250) 
+| fillnull value="-" 
+| table _time id.orig_h id.orig_p id.resp_h id.resp_p duration uid orig_ip_bytes resp_ip_bytes protocol app service</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>FILE logs</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:files:json" NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250) NOT mime_type IN (*x509*,*ocsp*,*html*,*plain*,*jpeg*) rx_hosts=$ipToken$ 
+| table _time rx_hosts mime_type conn_uids* fuid md5</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>HTTP logs</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:http:json" id.orig_h=$ipToken$ uid=$tokenUID$ id.resp_h=$tokenDestIP$ id.resp_p=$tokenDPort$ NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250) 
+| table _time id.orig_h id.orig_p id.resp_h id.resp_p uid 
+| fields - id.orig_h id.orig_p</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>HTTP logs - URL</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:http:json"  id.orig_h=$ipToken$ uid=$tokenUID$ id.resp_h=$tokenDestIP$ id.resp_p=$tokenDPort$ NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250) 
+| table _time uid http_* url uri 
+| fields - http_referrer http_content_type uri</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>SSL logs</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:ssl:json" id.orig_h=$ipToken$ uid=$tokenUID$ id.resp_h=$tokenDestIP$ id.resp_p=$tokenDPort$ NOT id.resp_h IN (224.0.0.*,169.254.255.255,239.255.255.250) 
+| table _time id.orig_h id.orig_p id.resp_h id.resp_p  uid cipher ja3 ja3s server_name version 
+| fields - id.orig_h id.orig_p cipher</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>DNS logs</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype sourcetype="bro:dns:json"  id.orig_h=$ipToken$ uid=$tokenUID$ id.resp_h=$tokenDestIP$ id.resp_p=$tokenDPort$ 
+| table _time id.orig_h id.orig_p id.resp_h id.resp_p uid query query_type answer answers TTLs* rcode_name 
+| fields - answer answers TTLs* id.orig_h id.orig_p</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Catch All (Notice &amp; Weird logs)</title>
+      <table>
+        <search>
+          <query>eventtype=zeek_idx_sourcetype NOT sourcetype IN ("bro:conn:json","bro:dns:json","bro:ssl:json","bro:http:json","bro:ntp:json") id.orig_h=$ipToken$ uid=$tokenUID$ 
+| table _time id.orig_h id.orig_p id.resp_h id.resp_p uid sourcetype</query>
+          <earliest>$time1.earliest$</earliest>
+          <latest>$time1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>
